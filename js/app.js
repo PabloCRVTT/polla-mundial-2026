@@ -377,7 +377,7 @@ function renderCampeonBanner() {
       <span class="cb-tag">🏆 Tu campeón · ${PUNTUACION.campeon} pts</span>
       <h3>Tu pronóstico de campeón está confirmado</h3>
       <div class="cb-pick"><span class="flag">${eq.bandera}</span> ${eq.nombre}</div>
-      ${!cerrado ? `<button class="btn-cb" onclick="navigateTo('eliminatoria')">Cambiar pronóstico</button>` : ""}
+      <p style="margin-top:10px">🔒 Este pronóstico es definitivo y no se puede cambiar.</p>
     </div>`;
   } else {
     cont.innerHTML = `
@@ -385,7 +385,8 @@ function renderCampeonBanner() {
       <span class="cb-tag">⚡ Hazlo antes del primer partido</span>
       <h3>¿Quién será el campeón del Mundial?</h3>
       <p>Es la apuesta más arriesgada: se hace al inicio sin saber nada.
-         Por eso vale <span class="cb-pts">${PUNTUACION.campeon} puntos</span> si aciertas.</p>
+         Por eso vale <span class="cb-pts">${PUNTUACION.campeon} puntos</span> si aciertas.
+         <strong>Una vez elegido no se puede cambiar.</strong></p>
       <button class="btn-cb" onclick="navigateTo('eliminatoria')">🏆 Elegir mi campeón</button>
     </div>`;
   }
@@ -549,36 +550,59 @@ async function guardarElimPred(matchId) {
 }
 
 function renderCampeonSelector() {
+  // Una vez elegido el campeón, el pronóstico queda BLOQUEADO (definitivo).
+  const bloqueado = !!myPredictions["_campeon"];
+
+  if (bloqueado) {
+    const fila = (key, label) => {
+      const eq = getEquipo(myPredictions[key]);
+      return `<div class="form-group">
+        <label>${label}</label>
+        <div class="champion-locked">${eq.bandera} ${eq.nombre}</div>
+      </div>`;
+    };
+    return `
+      <div class="locked-note">🔒 Tu pronóstico es definitivo y ya no se puede cambiar.</div>
+      ${fila("_campeon",    `🥇 Campeón (+${PUNTUACION.campeon} pts)`)}
+      ${fila("_subcampeon", `🥈 Subcampeón (+${PUNTUACION.subcampeon} pts)`)}
+      ${myPredictions["_tercero"] ? fila("_tercero", `🥉 Tercer lugar (+${PUNTUACION.tercero} pts)`) : ""}`;
+  }
+
   const opts = Object.entries(EQUIPOS)
     .sort((a, b) => a[1].nombre.localeCompare(b[1].nombre))
     .map(([id, eq]) => `<option value="${id}">${eq.bandera} ${eq.nombre}</option>`)
     .join("");
-  const sel = (id, label, val) => `
+  const sel = (id, label) => `
   <div class="form-group">
     <label>${label}</label>
     <select class="champion-select" id="${id}">
       <option value="">— Selecciona —</option>${opts}
     </select>
   </div>`;
-  // Set values after render
-  setTimeout(() => {
-    ["sel-campeon","sel-subcampeon","sel-tercero"].forEach((id, i) => {
-      const keys = ["_campeon","_subcampeon","_tercero"];
-      const el = document.getElementById(id);
-      if (el && myPredictions[keys[i]]) el.value = myPredictions[keys[i]];
-    });
-  }, 0);
-  return sel("sel-campeon",`🥇 Campeón (+${PUNTUACION.campeon} pts)`,"") +
-         sel("sel-subcampeon",`🥈 Subcampeón (+${PUNTUACION.subcampeon} pts)`,"") +
-         sel("sel-tercero",`🥉 Tercer lugar (+${PUNTUACION.tercero} pts)`,"") +
-         `<button class="btn-primary" onclick="guardarCampeonPred()">Guardar pronóstico final</button>`;
+  return `
+    <div class="warn-note">⚠️ Una vez que guardes, tu pronóstico de campeón quedará bloqueado y <strong>no podrás cambiarlo</strong>.</div>
+    ${sel("sel-campeon",`🥇 Campeón (+${PUNTUACION.campeon} pts)`)}
+    ${sel("sel-subcampeon",`🥈 Subcampeón (+${PUNTUACION.subcampeon} pts)`)}
+    ${sel("sel-tercero",`🥉 Tercer lugar (+${PUNTUACION.tercero} pts)`)}
+    <button class="btn-primary" onclick="guardarCampeonPred()">Guardar pronóstico (definitivo)</button>`;
 }
 
 function guardarCampeonPred() {
+  // Doble bloqueo: si ya hay campeón guardado, no permitir cambios.
+  if (myPredictions["_campeon"]) {
+    return showToast("🔒 Tu pronóstico ya está bloqueado", "error");
+  }
   const c = document.getElementById("sel-campeon").value;
   const s = document.getElementById("sel-subcampeon").value;
   const t = document.getElementById("sel-tercero").value;
   if (!c || !s) return showToast("Selecciona al menos campeón y subcampeón", "error");
+
+  const eqC = getEquipo(c);
+  const ok = confirm(
+    `Vas a elegir a ${eqC.bandera} ${eqC.nombre} como campeón.\n\n` +
+    `⚠️ Este pronóstico es DEFINITIVO: no se podrá cambiar después.\n\n¿Confirmas?`
+  );
+  if (!ok) return;
   guardarCampeon(c, s, t);
 }
 

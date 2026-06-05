@@ -78,6 +78,26 @@
 }
 .campeon-banner .cb-pick .flag { font-size: 28px; }
 
+/* ---- Notas de bloqueo / advertencia (selector campeón) ---- */
+.warn-note {
+  background: #fef3c7; color: #92400e;
+  border: 1px solid #fde68a; border-radius: 10px;
+  padding: 10px 12px; font-size: 13px; line-height: 1.5;
+  margin-bottom: 14px;
+}
+.locked-note {
+  background: #f0fdf4; color: #15803d;
+  border: 1px solid #bbf7d0; border-radius: 10px;
+  padding: 10px 12px; font-size: 13px; font-weight: 600;
+  margin-bottom: 14px;
+}
+.champion-locked {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--gris-claro); border-radius: 10px;
+  padding: 12px 14px; font-size: 15px; font-weight: 700;
+  color: var(--texto);
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
