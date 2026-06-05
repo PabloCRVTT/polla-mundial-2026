@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#064e3b">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Polla Mundial 2026 🏆</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<!-- ============ SPLASH ============ -->
+<!-- Splash -->
 <div id="splash">
   <div class="logo">⚽</div>
   <h1>Polla Mundial 2026</h1>
@@ -21,67 +19,25 @@
   <div class="spinner"></div>
 </div>
 
-<!-- ============ SETUP (cuando Firebase no está configurado) ============ -->
-<div id="setup-page" style="display:none;min-height:100vh;background:linear-gradient(135deg,#064e3b,#16a34a);align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:20px;padding:32px;max-width:500px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.2)">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:48px">⚙️</div>
-      <h2 style="font-size:20px;font-weight:800;margin-top:8px">Configuración inicial</h2>
-      <p style="color:#6b7280;font-size:14px;margin-top:4px">La app necesita Supabase para funcionar</p>
-    </div>
-    <div style="background:#f0fdf4;border-radius:12px;padding:16px;margin-bottom:16px;font-size:13px;line-height:1.7">
-      <strong>Pasos para configurar (5 min):</strong><br>
-      1. Ve a <a href="https://supabase.com" target="_blank" style="color:#16a34a">supabase.com</a> → New project<br>
-      2. <strong>Project Settings → API</strong> → copia <em>Project URL</em> y <em>anon key</em><br>
-      3. Pégalos en <code style="background:#e5e7eb;padding:1px 4px;border-radius:4px">js/config.js</code><br>
-      4. En <strong>SQL Editor</strong> ejecuta el schema del README<br>
-      5. Despliega en GitHub Pages (ver README.md)
-    </div>
-    <div style="background:#fef3c7;border-radius:12px;padding:12px;font-size:13px">
-      📖 Lee el <strong>README.md</strong> para instrucciones detalladas paso a paso.
-    </div>
-  </div>
-</div>
-
-<!-- ============ AUTH ============ -->
-<div id="auth-page">
+<!-- Login: solo nombre -->
+<div id="login-page">
   <div class="auth-card">
     <div class="auth-logo">
       <span class="emoji">⚽</span>
       <h1>Polla Mundial 2026</h1>
       <p>USA · Canadá · México 🇺🇸🇨🇦🇲🇽</p>
     </div>
-
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="login">Iniciar sesión</button>
-      <button class="auth-tab" data-tab="register">Registrarse</button>
-    </div>
-
-    <div id="register-extra" style="display:none">
-      <div class="form-group">
-        <label>Tu nombre</label>
-        <input type="text" id="auth-name" placeholder="Ej: Pablo Crovetto" autocomplete="name">
-      </div>
-    </div>
-
     <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="auth-email" placeholder="tu@email.com" autocomplete="email">
+      <label>Tu nombre</label>
+      <input type="text" id="login-name" placeholder="Ej: Pablo" autocomplete="name" autofocus>
     </div>
-    <div class="form-group">
-      <label>Contraseña</label>
-      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
-    </div>
-
-    <button class="btn-primary" id="btn-auth">Iniciar sesión</button>
-    <div id="auth-error" class="auth-error"></div>
+    <button class="btn-primary" id="btn-login" onclick="doLogin()">Entrar</button>
+    <div id="login-error" class="auth-error"></div>
   </div>
 </div>
 
-<!-- ============ APP ============ -->
+<!-- App -->
 <div id="app">
-
-  <!-- Header -->
   <header class="header">
     <div class="header-brand"><span>⚽</span>Mundial 2026</div>
     <div class="header-actions">
@@ -90,39 +46,21 @@
     </div>
   </header>
 
-  <!-- Vista: Dashboard -->
+  <!-- Dashboard -->
   <section id="view-dashboard" class="view active">
     <h2 class="section-title">🏠 Mi Panel</h2>
-
-    <!-- Banner pronóstico campeón (se hace al inicio, da muchos puntos) -->
     <div id="dash-campeon-banner"></div>
-
     <div class="score-hero">
       <div class="pts" id="dash-pts">0</div>
       <div class="pts-label">puntos totales</div>
       <div class="rank" id="dash-rank">#– de –</div>
     </div>
-
     <div class="stats-grid">
-      <div class="stat-box">
-        <div class="val" id="dash-predichos">0</div>
-        <div class="lbl">Predichos</div>
-      </div>
-      <div class="stat-box">
-        <div class="val" id="dash-total">72</div>
-        <div class="lbl">Total grupos</div>
-      </div>
-      <div class="stat-box">
-        <div class="val" id="dash-pts-grupos">0</div>
-        <div class="lbl">Pts grupos</div>
-      </div>
-      <div class="stat-box">
-        <div class="val" id="dash-pts-elim">0</div>
-        <div class="lbl">Pts elim.</div>
-      </div>
+      <div class="stat-box"><div class="val" id="dash-predichos">0</div><div class="lbl">Predichos</div></div>
+      <div class="stat-box"><div class="val" id="dash-total">72</div><div class="lbl">Total</div></div>
+      <div class="stat-box"><div class="val" id="dash-pts-grupos">0</div><div class="lbl">Pts grupos</div></div>
+      <div class="stat-box"><div class="val" id="dash-pts-elim">0</div><div class="lbl">Pts elim.</div></div>
     </div>
-
-    <!-- Puntuación explicada -->
     <div class="card mb-16">
       <div class="card-title">📋 Sistema de puntuación</div>
       <table style="width:100%;font-size:13px;border-collapse:collapse">
@@ -134,77 +72,52 @@
         <tr><td style="padding:4px 0;color:var(--gris)">Tercer puesto correcto</td><td style="text-align:right;font-weight:700;color:var(--dorado)">+8 pts</td></tr>
       </table>
     </div>
-
-    <!-- Próximos a predecir -->
     <div class="card">
       <div class="card-title">⏳ Pendientes de predicción</div>
-      <div id="dash-proximos">
-        <div class="empty-state"><div class="icon">⏳</div><p>Cargando...</p></div>
-      </div>
+      <div id="dash-proximos"></div>
     </div>
   </section>
 
-  <!-- Vista: Fase de Grupos -->
+  <!-- Grupos -->
   <section id="view-grupos" class="view">
     <h2 class="section-title">🗂️ Fase de Grupos</h2>
-    <p class="text-muted mb-16">Predice el marcador exacto de cada partido. Se cierra cuando empieza el partido.</p>
-    <div id="grupos-container">
-      <div class="empty-state"><div class="icon">⏳</div><p>Cargando grupos...</p></div>
-    </div>
+    <p class="text-muted mb-16">Predice el marcador exacto de cada partido.</p>
+    <div id="grupos-container"></div>
   </section>
 
-  <!-- Vista: Eliminatoria -->
+  <!-- Eliminatoria -->
   <section id="view-eliminatoria" class="view">
     <h2 class="section-title">⚡ Fase Eliminatoria</h2>
-    <p class="text-muted mb-16">Los partidos aparecen a medida que avanza el torneo. Incluye tu pronóstico de campeón ya.</p>
-    <div id="eliminatoria-container">
-      <div class="empty-state"><div class="icon">⏳</div><p>Cargando...</p></div>
-    </div>
+    <p class="text-muted mb-16">Los partidos aparecen a medida que avanza el torneo.</p>
+    <div id="eliminatoria-container"></div>
   </section>
 
-  <!-- Vista: Clasificación -->
+  <!-- Ranking -->
   <section id="view-ranking" class="view">
     <h2 class="section-title">🏅 Clasificación</h2>
-    <div class="card">
-      <div id="ranking-container">
-        <div class="empty-state"><div class="icon">⏳</div><p>Cargando ranking...</p></div>
-      </div>
-    </div>
+    <div class="card"><div id="ranking-container"></div></div>
   </section>
 
-  <!-- Vista: Admin (solo admin) -->
+  <!-- Admin -->
   <section id="view-admin" class="view">
     <h2 class="section-title">⚙️ Administración</h2>
     <div id="admin-container"></div>
   </section>
 
-  <!-- Nav inferior -->
+  <!-- Nav -->
   <nav class="bottom-nav">
-    <button class="nav-item active" data-view="dashboard">
-      <span class="nav-icon">🏠</span>Mi panel
-    </button>
-    <button class="nav-item" data-view="grupos">
-      <span class="nav-icon">🗂️</span>Grupos
-    </button>
-    <button class="nav-item" data-view="eliminatoria">
-      <span class="nav-icon">⚡</span>Elim.
-    </button>
-    <button class="nav-item" data-view="ranking">
-      <span class="nav-icon">🏅</span>Ranking
-    </button>
-    <button class="nav-item hidden" data-view="admin" id="nav-admin">
-      <span class="nav-icon">⚙️</span>Admin
-    </button>
+    <button class="nav-item active" data-view="dashboard"><span class="nav-icon">🏠</span>Panel</button>
+    <button class="nav-item" data-view="grupos"><span class="nav-icon">🗂️</span>Grupos</button>
+    <button class="nav-item" data-view="eliminatoria"><span class="nav-icon">⚡</span>Elim.</button>
+    <button class="nav-item" data-view="ranking"><span class="nav-icon">🏅</span>Ranking</button>
+    <button class="nav-item hidden" data-view="admin" id="nav-admin"><span class="nav-icon">⚙️</span>Admin</button>
   </nav>
+</div>
 
-</div><!-- /app -->
-
-<!-- Toast -->
 <div id="toast" class="toast"></div>
 
-<!-- Scripts -->
-<script src="js/config.js"></script>
-<script src="js/data.js"></script>
-<script src="js/app.js"></script>
+<script src="js/config.js?v=3"></script>
+<script src="js/data.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
 </body>
 </html>
