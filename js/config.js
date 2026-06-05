@@ -4,8 +4,8 @@
 // ============================================================
 
 // Copia estos valores desde: Project Settings → API
-const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
-const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+const SUPABASE_URL = "https://efaavgdibrlhnmjdbapw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmYWF2Z2RpYnJsaG5tamRiYXB3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQyMzQsImV4cCI6MjA5NjIwMDIzNH0.yds1ft6dkiTAxtn7xu185sxp2tOyYZkkqHa6jhv2kKI";
 
 // API de resultados (opcional)
 // Regístrate gratis: https://www.football-data.org
