@@ -8,10 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Polla Mundial 2026 🏆</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Firebase 9 compat -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -29,17 +27,15 @@
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:48px">⚙️</div>
       <h2 style="font-size:20px;font-weight:800;margin-top:8px">Configuración inicial</h2>
-      <p style="color:#6b7280;font-size:14px;margin-top:4px">La app necesita Firebase para funcionar</p>
+      <p style="color:#6b7280;font-size:14px;margin-top:4px">La app necesita Supabase para funcionar</p>
     </div>
     <div style="background:#f0fdf4;border-radius:12px;padding:16px;margin-bottom:16px;font-size:13px;line-height:1.7">
-      <strong>Pasos para configurar:</strong><br>
-      1. Ve a <a href="https://console.firebase.google.com" target="_blank" style="color:#16a34a">console.firebase.google.com</a><br>
-      2. Crea un proyecto nuevo → <em>"Polla Mundial 2026"</em><br>
-      3. Agrega una app Web (icono &lt;/&gt;)<br>
-      4. Copia la configuración en <code style="background:#e5e7eb;padding:1px 4px;border-radius:4px">js/config.js</code><br>
-      5. Activa <strong>Authentication → Email/Password</strong><br>
-      6. Crea una base de datos <strong>Firestore</strong> en modo producción<br>
-      7. Despliega en GitHub Pages (ver README)
+      <strong>Pasos para configurar (5 min):</strong><br>
+      1. Ve a <a href="https://supabase.com" target="_blank" style="color:#16a34a">supabase.com</a> → New project<br>
+      2. <strong>Project Settings → API</strong> → copia <em>Project URL</em> y <em>anon key</em><br>
+      3. Pégalos en <code style="background:#e5e7eb;padding:1px 4px;border-radius:4px">js/config.js</code><br>
+      4. En <strong>SQL Editor</strong> ejecuta el schema del README<br>
+      5. Despliega en GitHub Pages (ver README.md)
     </div>
     <div style="background:#fef3c7;border-radius:12px;padding:12px;font-size:13px">
       📖 Lee el <strong>README.md</strong> para instrucciones detalladas paso a paso.

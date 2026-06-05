@@ -1,183 +1,233 @@
 # ⚽ Polla Mundial 2026 — My Family
 
-Aplicación web para predecir resultados del **Mundial de Fútbol 2026** (USA · Canadá · México).  
-Registro con email + contraseña, predicciones por partido, ranking automático en tiempo real.
+App web para predecir resultados del **Mundial de Fútbol 2026** (USA · Canadá · México).  
+Login con email + contraseña, predicciones por partido, ranking automático en tiempo real.  
+**Stack: HTML/CSS/JS puro + Supabase (gratis) + GitHub Pages (gratis)**
+
+---
 
 ## ✨ Funcionalidades
 
-- 🔐 **Registro/Login** con email y contraseña (Firebase Auth)
-- 🗂️ **Fase de grupos** — predice el marcador de los 72 partidos (12 grupos × 6 partidos)
-- ⚡ **Eliminatoria** — bracket que se completa a medida que avanza el torneo
-- 🏆 **Pronóstico de campeón** — elige campeón, subcampeón y tercer puesto
-- 🏅 **Ranking en tiempo real** — se actualiza al cargar resultados
-- 📡 **Resultados automáticos** — integración con football-data.org
-- ⚙️ **Panel de admin** — tu email puede cargar resultados manualmente o desde la API
+- 🔐 **Registro/Login** — solo email y contraseña, sin cuentas externas
+- 🗂️ **Fase de grupos** — predice el marcador de los 72 partidos (12 grupos)
+- ⚡ **Eliminatoria** — bracket dinámico que se completa a medida que avanza el torneo
+- 🏆 **Pronóstico final** — elige campeón, subcampeón y tercer puesto
+- 🏅 **Ranking en tiempo real** — actualización automática vía Supabase Realtime
+- 📡 **Resultados automáticos** — integración opcional con football-data.org
+- ⚙️ **Panel admin** — carga resultados manual o desde API (solo tu email)
+
+---
 
 ## 📊 Sistema de puntuación
 
 | Predicción | Puntos |
 |---|---|
 | Resultado correcto (G/E/P) | +2 pts |
-| Marcador exacto | +5 pts |
-| Partido eliminatorio (resultado) | +3–10 pts (escala por ronda) |
+| Marcador exacto grupos | +5 pts |
+| Partido eliminatorio correcto | +3 pts (R32) → +10 pts (Final) |
 | Marcador exacto eliminatoria | +3 pts bonus |
 | Campeón correcto | +15 pts |
 | Subcampeón correcto | +8 pts |
 | Tercer puesto correcto | +4 pts |
 
-## 🚀 Configuración paso a paso
+---
 
-### 1. Firebase (backend)
+## 🚀 Setup paso a paso
 
-1. Ve a [console.firebase.google.com](https://console.firebase.google.com)
-2. **Crear proyecto** → nombre: `polla-mundial-2026`
-3. Desactiva Google Analytics (no es necesario)
-4. En el menú lateral → **Build → Authentication → Get started**
-   - Activa **Email/Password**
-5. En el menú lateral → **Build → Firestore Database → Create database**
-   - Elige **Production mode** (región: `us-central1` o la más cercana)
-   - En **Rules**, pega estas reglas de seguridad:
+### 1. Crear proyecto en Supabase (5 min)
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Usuarios: solo el propio usuario puede leer/escribir su doc
-    match /usuarios/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    // Predicciones: solo el propio usuario puede escribir, todos pueden leer
-    match /predicciones/{uid} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
-    }
-    // Resultados: solo admins pueden escribir, todos pueden leer
-    match /resultados/{matchId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        request.auth.token.email in ['pablocrovetto87@gmail.com'];
-    }
-    // Eliminatoria: solo admins pueden escribir
-    match /eliminatoria/{matchId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        request.auth.token.email in ['pablocrovetto87@gmail.com'];
-    }
-  }
-}
-```
-
-6. En **Project settings** (ícono ⚙️) → **General** → sección **Your apps** → añade una **Web app** (`</>`)
-7. Copia la `firebaseConfig` y pégala en `js/config.js`:
+1. Ve a **[supabase.com](https://supabase.com)** → **Start your project** → crea cuenta gratis
+2. **New project** → nombre: `polla-mundial-2026` → elige una región → crea contraseña fuerte
+3. Espera ~2 min a que el proyecto se inicialice
+4. Ve a **Project Settings → API** y copia:
+   - **Project URL** → ej: `https://abcxyz.supabase.co`
+   - **anon public key** → string largo que empieza con `eyJ...`
+5. Pega ambos valores en `js/config.js`:
 
 ```javascript
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSy...",
-  authDomain: "polla-mundial-2026.firebaseapp.com",
-  projectId: "polla-mundial-2026",
-  storageBucket: "polla-mundial-2026.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abc123"
-};
+const SUPABASE_URL = "https://abcxyz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
 ```
 
-### 2. API de resultados (opcional pero recomendado)
+### 2. Crear las tablas (SQL Editor)
 
-1. Regístrate gratis en [football-data.org](https://www.football-data.org/)
-2. Obtén tu API key gratuita (100 requests/día)
-3. Agrégala en `js/config.js`:
+En Supabase → **SQL Editor** → **New query** → pega y ejecuta:
 
-```javascript
-const FOOTBALL_API_KEY = "tu_key_aqui";
+```sql
+-- Tabla de usuarios (perfil público)
+create table usuarios (
+  id uuid references auth.users on delete cascade primary key,
+  nombre text not null,
+  email text not null,
+  created_at timestamptz default now()
+);
+
+-- Tabla de predicciones
+create table predicciones (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  match_id text not null,
+  home_score integer,
+  away_score integer,
+  extra_value text,   -- para campeón/subcampeón/tercero
+  updated_at timestamptz default now(),
+  unique(user_id, match_id)
+);
+
+-- Tabla de resultados reales
+create table resultados (
+  match_id text primary key,
+  home_score integer,
+  away_score integer,
+  value text,         -- para resultados especiales (_campeon, etc.)
+  status text default 'SCHEDULED',
+  updated_at timestamptz default now()
+);
+
+-- Tabla de partidos eliminatorios (el admin los carga conforme avanzan)
+create table eliminatoria (
+  id text primary key,
+  fase text not null,     -- r32, r16, qf, sf, 3ro, fin
+  orden integer not null,
+  local_id text,          -- ID del equipo (de data.js)
+  visitante_id text,
+  local_label text,       -- ej: "1° Grupo A" (si aún no se sabe)
+  visitante_label text,
+  created_at timestamptz default now()
+);
+
+-- Habilitar Realtime en estas tablas
+alter publication supabase_realtime add table resultados;
+alter publication supabase_realtime add table eliminatoria;
 ```
 
-> ⚠️ **Nota de seguridad**: La API key quedará expuesta en el código cliente.  
-> Para uso familiar/interno con pocos usuarios esto es aceptable.  
-> Para producción pública, crea una Firebase Cloud Function que haga de proxy.
+### 3. Configurar permisos (Row Level Security)
 
-### 3. Actualizar grupos del sorteo
+En **SQL Editor** → nuevo query → ejecuta:
 
-El archivo `js/data.js` tiene grupos *estimados*. **Actualiza con los grupos oficiales**:
+```sql
+-- Activar RLS
+alter table usuarios enable row level security;
+alter table predicciones enable row level security;
+alter table resultados enable row level security;
+alter table eliminatoria enable row level security;
 
-1. Consulta [fifa.com](https://www.fifa.com/fifaplus/en/tournaments/mens/worldcup/2026) para los grupos reales
-2. Edita el objeto `GRUPOS` en `js/data.js`
-3. Asegúrate de que todos los IDs de equipo existan en el objeto `EQUIPOS`
+-- Usuarios: cada uno lee/escribe solo el suyo
+create policy "usuarios_own" on usuarios
+  for all using (auth.uid() = id);
 
-### 4. Despliegue en GitHub Pages
+-- Predicciones: cada uno escribe las suyas, todos leen
+create policy "predicciones_read" on predicciones
+  for select using (auth.role() = 'authenticated');
+create policy "predicciones_own_write" on predicciones
+  for insert with check (auth.uid() = user_id);
+create policy "predicciones_own_update" on predicciones
+  for update using (auth.uid() = user_id);
+
+-- Resultados: todos leen, solo admins escriben (via service role o SQL Editor)
+create policy "resultados_read" on resultados
+  for select using (auth.role() = 'authenticated');
+
+-- Eliminatoria: todos leen
+create policy "eliminatoria_read" on eliminatoria
+  for select using (auth.role() = 'authenticated');
+```
+
+> **Nota:** Para que el admin pueda escribir resultados desde la app, la forma más simple es desde el **SQL Editor** de Supabase directamente, o puedes dar permisos de escritura al email de admin con una policy adicional usando `auth.jwt() ->> 'email'`.
+
+### 4. Configurar autenticación
+
+En Supabase → **Authentication → Settings**:
+- Deja **Email confirmations** en **OFF** para uso interno (más simple)
+- En **URL Configuration**: agrega `https://TU_USUARIO.github.io` a los **Redirect URLs**
+
+### 5. Actualizar los grupos del torneo
+
+Los grupos en `js/data.js` son una estimación. **Antes de lanzar**, verifica los grupos reales en [fifa.com](https://www.fifa.com/fifaplus/en/tournaments/mens/worldcup/2026) y edita el objeto `GRUPOS` en ese archivo.
+
+### 6. Subir a GitHub Pages
 
 ```bash
-# 1. Crea un repositorio en GitHub (ej: polla-mundial-2026)
+# 1. Crea un repo nuevo en github.com/new → nombre: polla-mundial-2026 → Public
 
-# 2. Inicializa y sube el código
+# 2. Desde la carpeta del proyecto:
 git init
 git add .
-git commit -m "Initial: Polla Mundial 2026"
+git commit -m "Polla Mundial 2026"
 git branch -M main
 git remote add origin https://github.com/TU_USUARIO/polla-mundial-2026.git
 git push -u origin main
 
-# 3. Activa GitHub Pages
-# Ve a: Settings → Pages → Source: "Deploy from branch" → Branch: main → / (root)
-# Tu app estará en: https://TU_USUARIO.github.io/polla-mundial-2026
+# 3. Activa GitHub Pages:
+# Repo → Settings → Pages → Source: "Deploy from branch"
+# Branch: main → / (root) → Save
+
+# Tu app estará en:
+# https://TU_USUARIO.github.io/polla-mundial-2026
 ```
 
-> ⚠️ **Dominio y Firebase Auth**: En Firebase Console → Authentication → Settings → **Authorized domains**, agrega `tu-usuario.github.io`
+---
 
-## 🏗️ Estructura del proyecto
+## 📂 Estructura del proyecto
 
 ```
 polla-mundial-2026/
-├── index.html          # SPA principal
+├── index.html          # SPA completa (una sola página)
 ├── css/
-│   └── style.css       # Estilos (mobile-first)
+│   └── style.css       # Estilos, mobile-first
 ├── js/
-│   ├── config.js       # 🔧 EDITAR: Firebase + API keys
-│   ├── data.js         # 🔧 EDITAR: grupos y equipos del sorteo
-│   └── app.js          # Lógica completa de la aplicación
+│   ├── config.js       # 🔧 EDITAR: Supabase URL + anon key
+│   ├── data.js         # 🔧 EDITAR: grupos y equipos del Mundial
+│   └── app.js          # Toda la lógica de la app
 └── README.md
 ```
 
-## 📱 Uso
+---
 
-1. **Comparte la URL** de GitHub Pages con tu familia
-2. Cada miembro se **registra** con email y contraseña
-3. Entra a **"Grupos"** y predice los 72 partidos de la fase de grupos
-4. Predice también el **campeón, subcampeón y tercer puesto**
-5. Tú (admin) **cargas los resultados** desde el panel Admin (manual o via API)
-6. El **ranking** se actualiza automáticamente
+## ⚙️ Cómo cargar resultados (Admin)
 
-## 🔧 Administración
+Tú (el email en `POLLA_CONFIG.admins`) verás la pestaña **⚙️ Admin** al iniciar sesión.
 
-Solo los emails listados en `POLLA_CONFIG.admins` (en `config.js`) ven la pestaña ⚙️ Admin.
+**Opción A — Desde la app** (manual):
+- Ingresas el marcador de cada partido y haces clic en "Guardar"
 
-Desde ahí puedes:
-- **Ingresar resultados manualmente** partido por partido
-- **Obtener resultados desde API** (football-data.org) con un clic
-- **Definir campeón/subcampeón/tercer puesto** al final del torneo
-- **Crear partidos eliminatorios** (próximamente: desde Firestore Console)
+**Opción B — API automática** (football-data.org):
+1. Regístrate en [football-data.org](https://www.football-data.org/) (gratis)
+2. Agrega tu key en `js/config.js` → `FOOTBALL_API_KEY`
+3. En el panel Admin → "🔄 Obtener resultados"
 
-### Agregar partidos eliminatorios (desde Firestore Console)
-
-Una vez que empiece la eliminatoria, agrega documentos en la colección `eliminatoria`:
-
-```json
-{
-  "id": "r32_1",
-  "fase": "r32",
-  "orden": 1,
-  "localId": "arg",
-  "visitanteId": "bra",
-  "localLabel": "1° Grupo A",
-  "visitanteLabel": "2° Grupo B"
-}
+**Opción C — SQL Editor de Supabase** (más directo):
+```sql
+insert into resultados (match_id, home_score, away_score, status)
+values ('GA1', 2, 1, 'FINISHED')
+on conflict (match_id) do update
+  set home_score = 2, away_score = 1, status = 'FINISHED';
 ```
+
+### Agregar partidos eliminatorios
+
+Una vez que termina la fase de grupos, agrega los partidos desde SQL Editor:
+
+```sql
+insert into eliminatoria (id, fase, orden, local_id, visitante_id, local_label, visitante_label)
+values
+  ('r32_1', 'r32', 1, 'arg', 'uru', '1° Grupo B', '2° Grupo A'),
+  ('r32_2', 'r32', 2, 'bra', 'col', '1° Grupo E', '2° Grupo F');
+  -- etc...
+```
+
+---
 
 ## ⚡ Tecnologías
 
-- **Frontend**: HTML + CSS + Vanilla JS (sin frameworks, funciona en cualquier hosting estático)
-- **Backend**: Firebase (Firestore + Authentication) — plan gratuito Spark
-- **Resultados**: football-data.org API (gratuito)
-- **Hosting**: GitHub Pages (gratuito)
+| Capa | Tecnología | Costo |
+|---|---|---|
+| Frontend | HTML + CSS + JS vanilla | Gratis |
+| Base de datos | Supabase (PostgreSQL) | Gratis (hasta 500MB) |
+| Autenticación | Supabase Auth | Gratis (hasta 50k MAU) |
+| Realtime | Supabase Realtime | Gratis |
+| Hosting | GitHub Pages | Gratis |
+| Resultados | football-data.org API | Gratis (100 req/día) |
 
 ---
 
