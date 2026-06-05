@@ -130,7 +130,7 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---- Auth ---- */
-#auth-page {
+#login-page {
   min-height: 100vh;
   display: none;
   align-items: center;
@@ -138,7 +138,7 @@ body {
   background: linear-gradient(135deg, #064e3b 0%, #065f46 40%, #0f766e 100%);
   padding: 20px;
 }
-#auth-page.active { display: flex; }
+/* login-page visibility controlled by JS style.display */
 
 .auth-card {
   background: #fff;

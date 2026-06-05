@@ -410,9 +410,9 @@ function renderAdmin() {
         const loc = getEquipo(p.local), vis = getEquipo(p.visitante); const r = realResults[p.id];
         return `<div class="admin-match"><h4>${loc.bandera} ${loc.nombre} vs ${vis.nombre} ${vis.bandera} <span class="badge badge-gray">G${p.grupo}</span></h4>
           <div class="admin-score-row">
-            <input type="number" min="0" max="20" id="ar-h-${p.id}" value="${r?.h??"}" placeholder="0">
+            <input type="number" min="0" max="20" id="ar-h-${p.id}" value="${r?.h != null ? r.h : ""}" placeholder="0">
             <span style="font-weight:700">–</span>
-            <input type="number" min="0" max="20" id="ar-v-${p.id}" value="${r?.v??""}" placeholder="0">
+            <input type="number" min="0" max="20" id="ar-v-${p.id}" value="${r?.v != null ? r.v : ""}" placeholder="0">
             <button class="btn-admin" onclick="guardarResultadoAdmin('${p.id}')">Guardar</button>
           </div></div>`;
       }).join("")}
