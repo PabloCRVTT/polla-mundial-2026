@@ -24,6 +24,60 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ---- Banner pronóstico Campeón (dashboard) ---- */
+.campeon-banner {
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #b45309 0%, #f59e0b 55%, #fbbf24 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, .35);
+  position: relative;
+  overflow: hidden;
+}
+.campeon-banner::after {
+  content: "🏆";
+  position: absolute;
+  right: -8px; bottom: -16px;
+  font-size: 96px; opacity: .18;
+  transform: rotate(-12deg);
+}
+.campeon-banner .cb-tag {
+  display: inline-block;
+  background: rgba(0,0,0,.2);
+  padding: 3px 10px; border-radius: 100px;
+  font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+.campeon-banner h3 { font-size: 19px; font-weight: 900; line-height: 1.2; }
+.campeon-banner p { font-size: 13px; opacity: .95; margin-top: 4px; }
+.campeon-banner .cb-pts {
+  font-weight: 900; background: rgba(255,255,255,.25);
+  padding: 1px 7px; border-radius: 6px;
+}
+.campeon-banner .btn-cb {
+  display: inline-block; margin-top: 14px;
+  background: #fff; color: #b45309;
+  padding: 11px 20px; border-radius: 10px;
+  font-size: 14px; font-weight: 800; border: none;
+  cursor: pointer; position: relative; z-index: 1;
+  transition: transform .1s;
+}
+.campeon-banner .btn-cb:active { transform: scale(.97); }
+
+/* Banner cuando YA eligió campeón (estado confirmado) */
+.campeon-banner.elegido {
+  background: linear-gradient(135deg, #064e3b 0%, #16a34a 100%);
+  box-shadow: 0 6px 20px rgba(22, 163, 74, .3);
+}
+.campeon-banner.elegido::after { content: "✅"; }
+.campeon-banner .cb-pick {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; font-size: 18px; font-weight: 800;
+}
+.campeon-banner .cb-pick .flag { font-size: 28px; }
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);

@@ -186,10 +186,15 @@ const PUNTUACION = {
     fin: 10,
   },
   eliminatoriaExacto: 3,     // Bonus por marcador exacto en eliminatoria
-  campeon: 15,
-  subcampeon: 8,
-  tercero: 4,
+  // Pronóstico que se hace AL INICIO (antes de que arranque el Mundial).
+  // Es la apuesta más arriesgada → la que más puntos otorga.
+  campeon: 30,
+  subcampeon: 15,
+  tercero: 8,
 };
+
+// Fecha límite para elegir campeón (debe hacerse antes del primer partido)
+const CIERRE_CAMPEON = new Date("2026-06-11T16:00:00");
 
 // Fechas del torneo
 const TORNEO = {

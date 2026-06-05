@@ -342,6 +342,8 @@ function renderDashboard() {
   document.getElementById("dash-pts-grupos").textContent = me.grupos || 0;
   document.getElementById("dash-pts-elim").textContent  = (me.eliminatoria || 0) + (me.bonus || 0);
 
+  renderCampeonBanner();
+
   const sin = PARTIDOS_GRUPOS.filter(p => !myPredictions[p.id]);
   const el = document.getElementById("dash-proximos");
   if (!sin.length) {
@@ -358,6 +360,34 @@ function renderDashboard() {
       </div>`;
     }).join("") + (sin.length > 6
       ? `<p class="text-muted text-center mt-8">+${sin.length - 6} más sin predecir</p>` : "");
+  }
+}
+
+// ---------- Banner pronóstico Campeón ----------
+function renderCampeonBanner() {
+  const cont = document.getElementById("dash-campeon-banner");
+  if (!cont) return;
+  const campeonId = myPredictions["_campeon"];
+  const cerrado = typeof CIERRE_CAMPEON !== "undefined" && new Date() > CIERRE_CAMPEON;
+
+  if (campeonId) {
+    const eq = getEquipo(campeonId);
+    cont.innerHTML = `
+    <div class="campeon-banner elegido">
+      <span class="cb-tag">🏆 Tu campeón · ${PUNTUACION.campeon} pts</span>
+      <h3>Tu pronóstico de campeón está confirmado</h3>
+      <div class="cb-pick"><span class="flag">${eq.bandera}</span> ${eq.nombre}</div>
+      ${!cerrado ? `<button class="btn-cb" onclick="navigateTo('eliminatoria')">Cambiar pronóstico</button>` : ""}
+    </div>`;
+  } else {
+    cont.innerHTML = `
+    <div class="campeon-banner">
+      <span class="cb-tag">⚡ Hazlo antes del primer partido</span>
+      <h3>¿Quién será el campeón del Mundial?</h3>
+      <p>Es la apuesta más arriesgada: se hace al inicio sin saber nada.
+         Por eso vale <span class="cb-pts">${PUNTUACION.campeon} puntos</span> si aciertas.</p>
+      <button class="btn-cb" onclick="navigateTo('eliminatoria')">🏆 Elegir mi campeón</button>
+    </div>`;
   }
 }
 
@@ -538,9 +568,9 @@ function renderCampeonSelector() {
       if (el && myPredictions[keys[i]]) el.value = myPredictions[keys[i]];
     });
   }, 0);
-  return sel("sel-campeon","🥇 Campeón (+15 pts)","") +
-         sel("sel-subcampeon","🥈 Subcampeón (+8 pts)","") +
-         sel("sel-tercero","🥉 Tercer lugar (+4 pts)","") +
+  return sel("sel-campeon",`🥇 Campeón (+${PUNTUACION.campeon} pts)`,"") +
+         sel("sel-subcampeon",`🥈 Subcampeón (+${PUNTUACION.subcampeon} pts)`,"") +
+         sel("sel-tercero",`🥉 Tercer lugar (+${PUNTUACION.tercero} pts)`,"") +
          `<button class="btn-primary" onclick="guardarCampeonPred()">Guardar pronóstico final</button>`;
 }
 
