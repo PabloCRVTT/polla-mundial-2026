@@ -400,15 +400,17 @@ body {
 .bracket-team .score { margin-left: auto; font-weight: 700; font-size: 18px; }
 
 /* ---- Clasificación ---- */
-.ranking-table { width: 100%; border-collapse: collapse; }
+.ranking-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ranking-table { width: 100%; border-collapse: collapse; min-width: 360px; }
 .ranking-table th {
-  text-align: left; padding: 8px 10px;
-  font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+  text-align: left; padding: 8px 8px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .4px;
   color: var(--gris); border-bottom: 2px solid var(--gris-borde);
+  white-space: nowrap;
 }
 .ranking-table td {
-  padding: 10px 10px; border-bottom: 1px solid var(--gris-borde);
-  font-size: 14px;
+  padding: 10px 8px; border-bottom: 1px solid var(--gris-borde);
+  font-size: 13px;
 }
 .ranking-table tr:last-child td { border-bottom: none; }
 .ranking-table tr.yo td { background: #f0fdf4; }
@@ -504,6 +506,19 @@ body {
 }
 
 /* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .partido-equipos { flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .equipo-nombre { font-size: 13px; }
+  .score-input { width: 40px; height: 40px; font-size: 18px; }
+  .score-input-group { gap: 6px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .header-brand { font-size: 15px; }
+  .section-title { font-size: 18px; }
+  .ranking-table td { padding: 8px 6px; font-size: 12px; }
+  .ranking-table th { padding: 6px; font-size: 9px; }
+  .rank-pos { width: 24px; height: 24px; font-size: 10px; }
+  .pts-badge { font-size: 14px; }
+}
 @media (min-width: 640px) {
   .view { padding: 20px; max-width: 720px; margin: 0 auto; }
   .stats-grid { grid-template-columns: repeat(4, 1fr); }

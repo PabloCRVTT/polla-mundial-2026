@@ -391,7 +391,7 @@ async function renderRanking() {
   const sorted = Object.values(allScores).sort((a,b) => b.total - a.total);
   const cont = document.getElementById("ranking-container");
   if (!sorted.length) { cont.innerHTML = `<div class="empty-state"><div class="icon">🏅</div><p>Aún no hay participantes</p></div>`; return; }
-  cont.innerHTML = `<table class="ranking-table">
+  cont.innerHTML = `<div class="ranking-scroll"><table class="ranking-table">
     <thead><tr><th>#</th><th>Participante</th><th style="text-align:right">Total</th><th style="text-align:right">Grupos</th><th style="text-align:right">Elim.</th></tr></thead>
     <tbody>${sorted.map((s,i) => {
       const pos = i+1, yo = s.uid === userName;
@@ -403,7 +403,7 @@ async function renderRanking() {
         <td style="text-align:right;color:var(--gris)">${s.grupos||0}</td>
         <td style="text-align:right;color:var(--gris)">${(s.eliminatoria||0)+(s.bonus||0)}</td>
       </tr>`;
-    }).join("")}</tbody></table>`;
+    }).join("")}</tbody></table></div>`;
 }
 
 // ---------- Admin ----------
