@@ -535,7 +535,7 @@ async function fetchFromAPI(silent) {
   const st = document.getElementById("api-status");
   if (st && !silent) st.textContent = "Consultando ESPN...";
   try {
-    const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard");
+    const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260720");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { events = [] } = await res.json();
     let n = 0;
