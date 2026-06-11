@@ -85,6 +85,11 @@ async function initApp() {
 
   await recalcAll();
   navigateTo("dashboard");
+
+  if (FOOTBALL_API_KEY && FOOTBALL_API_KEY !== "TU_FOOTBALL_DATA_KEY") {
+    fetchFromAPI(true);
+    setInterval(() => fetchFromAPI(true), 5 * 60 * 1000);
+  }
 }
 
 // ---------- Data ----------
@@ -441,9 +446,16 @@ async function guardarResultadoAdmin(matchId) {
   showToast("✅ Resultado guardado", "success"); renderAdmin();
 }
 
-async function fetchFromAPI() {
+const TLA_TO_ID = { CUW: "cur", URY: "uru" };
+function tlaToId(tla) {
+  if (!tla) return null;
+  const mapped = TLA_TO_ID[tla] || tla.toLowerCase();
+  return EQUIPOS[mapped] ? mapped : null;
+}
+
+async function fetchFromAPI(silent) {
   const st = document.getElementById("api-status");
-  st.textContent = "Consultando...";
+  if (st && !silent) st.textContent = "Consultando...";
   try {
     const res = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=FINISHED`,
       { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
@@ -451,27 +463,23 @@ async function fetchFromAPI() {
     const { matches = [] } = await res.json();
     let n = 0;
     for (const m of matches) {
-      const locId = findEquipoByName(m.homeTeam?.name);
-      const visId = findEquipoByName(m.awayTeam?.name);
+      const locId = tlaToId(m.homeTeam?.tla);
+      const visId = tlaToId(m.awayTeam?.tla);
       if (!locId || !visId) continue;
       const matchId = findMatchId(locId, visId);
       if (!matchId) continue;
       const h = m.score?.fullTime?.home, v = m.score?.fullTime?.away;
       if (h == null) continue;
+      if (realResults[matchId]?.status === "FINISHED" && realResults[matchId]?.h === h && realResults[matchId]?.v === v) continue;
       await sb.from("resultados").upsert({ match_id: matchId, home_score: h, away_score: v, status: "FINISHED" }, { onConflict: "match_id" });
       n++;
     }
-    st.textContent = `✅ ${n} resultado(s) actualizados`;
-    await loadResults(); await recalcAll(); renderAdmin();
-  } catch (e) { st.textContent = `❌ ${e.message}`; }
+    if (n > 0) { await loadResults(); await recalcAll(); }
+    if (st && !silent) st.textContent = `✅ ${n} resultado(s) actualizados`;
+    return n;
+  } catch (e) { if (st && !silent) st.textContent = `❌ ${e.message}`; return 0; }
 }
 
-function findEquipoByName(name = "") {
-  const n = name.toLowerCase();
-  for (const [id, eq] of Object.entries(EQUIPOS))
-    if (eq.nombre.toLowerCase().includes(n) || n.includes(eq.nombre.toLowerCase())) return id;
-  return null;
-}
 function findMatchId(l, v) {
   return PARTIDOS_GRUPOS.find(m => (m.local === l && m.visitante === v) || (m.local === v && m.visitante === l))?.id || null;
 }
