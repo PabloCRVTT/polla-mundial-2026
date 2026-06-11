@@ -61,6 +61,7 @@ function navigateTo(view) {
   if (view === "dashboard") renderDashboard();
   if (view === "grupos") renderGrupos();
   if (view === "eliminatoria") renderEliminatoria();
+  if (view === "resultados") renderResultados();
   if (view === "ranking") renderRanking();
   if (view === "admin" && isAdmin()) renderAdmin();
 }
@@ -79,6 +80,7 @@ async function initApp() {
     { event: "*", schema: "public", table: "resultados" },
     async () => { await loadResults(); await recalcAll();
       if (currentView === "dashboard") renderDashboard();
+      if (currentView === "resultados") renderResultados();
       if (currentView === "ranking") renderRanking();
       if (currentView === "grupos") renderGrupos(); }
   ).subscribe();
@@ -388,6 +390,78 @@ function guardarCampeonPred() {
   const eq = getEquipo(c);
   if (!confirm(`Eliges a ${eq.bandera} ${eq.nombre} como campeón.\n\n⚠️ DEFINITIVO: no se podrá cambiar.\n\n¿Confirmas?`)) return;
   guardarCampeon(c, s, t);
+}
+
+// ---------- Resultados ----------
+function renderResultados() {
+  const cont = document.getElementById("resultados-container");
+  const finalizados = PARTIDOS_GRUPOS.filter(p => realResults[p.id]?.status === "FINISHED");
+  const enCurso = PARTIDOS_GRUPOS.filter(p => realResults[p.id] && realResults[p.id].status !== "FINISHED");
+  const proximos = PARTIDOS_GRUPOS.filter(p => !realResults[p.id]);
+
+  let html = "";
+
+  if (enCurso.length) {
+    html += `<div class="card"><div class="card-title">🔴 En juego</div>`;
+    html += enCurso.map(p => resultadoRow(p)).join("");
+    html += `</div>`;
+  }
+
+  if (finalizados.length) {
+    const porFecha = {};
+    finalizados.forEach(p => {
+      const grupo = p.grupo;
+      (porFecha[grupo] ??= []).push(p);
+    });
+    Object.keys(GRUPOS).forEach(gid => {
+      const partidos = porFecha[gid];
+      if (!partidos?.length) return;
+      const grupo = GRUPOS[gid];
+      html += `<div class="card"><div class="card-title">Grupo ${gid} — ${grupo.equipos.map(id => getEquipo(id).bandera).join(" ")}</div>`;
+      html += partidos.map(p => resultadoRow(p)).join("");
+      html += `</div>`;
+    });
+  }
+
+  if (!finalizados.length && !enCurso.length) {
+    html = `<div class="empty-state"><div class="icon">📺</div><p>Aún no hay resultados — el primer partido es hoy.</p></div>`;
+  }
+
+  if (proximos.length) {
+    html += `<div class="card"><div class="card-title">📅 Próximos partidos (${proximos.length})</div>`;
+    html += proximos.slice(0, 12).map(p => {
+      const loc = getEquipo(p.local), vis = getEquipo(p.visitante);
+      return `<div class="partido-row"><div class="partido-equipos">
+        <span class="equipo-nombre">${loc.bandera} ${loc.nombre}</span>
+        <span style="color:var(--gris);font-size:12px">G${p.grupo}</span>
+        <span class="equipo-nombre visitante">${vis.nombre} ${vis.bandera}</span>
+      </div></div>`;
+    }).join("");
+    if (proximos.length > 12) html += `<p class="text-muted" style="text-align:center;margin-top:8px">+${proximos.length - 12} partidos más</p>`;
+    html += `</div>`;
+  }
+
+  cont.innerHTML = html;
+}
+
+function resultadoRow(p) {
+  const loc = getEquipo(p.local), vis = getEquipo(p.visitante);
+  const r = realResults[p.id];
+  const finished = r?.status === "FINISHED";
+  return `<div class="partido-row cerrado" style="padding:10px 0;border-bottom:1px solid var(--gris-borde)">
+    <div class="partido-equipos">
+      <span class="equipo-nombre">${loc.bandera} ${loc.nombre}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px;font-weight:800">${r?.h ?? "–"}</span>
+        <span style="color:var(--gris)">–</span>
+        <span style="font-size:20px;font-weight:800">${r?.v ?? "–"}</span>
+      </div>
+      <span class="equipo-nombre visitante">${vis.nombre} ${vis.bandera}</span>
+    </div>
+    <div style="text-align:center;margin-top:4px">
+      <span style="font-size:11px;color:var(--gris)">${finished ? "✅ Final" : "🔴 En juego"} · Grupo ${p.grupo}</span>
+    </div>
+  </div>`;
 }
 
 // ---------- Ranking ----------
