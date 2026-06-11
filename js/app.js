@@ -7,6 +7,7 @@ let currentView = "dashboard";
 let myPredictions = {};
 let allScores = {};
 let realResults = {};
+let matchDates = {};
 let knockoutMatches = [];
 let appInitialized = false;
 
@@ -428,12 +429,15 @@ function renderResultados() {
   }
 
   if (proximos.length) {
+    proximos.sort((a, b) => (matchDates[a.id] || "Z").localeCompare(matchDates[b.id] || "Z"));
     html += `<div class="card"><div class="card-title">📅 Próximos partidos (${proximos.length})</div>`;
     html += proximos.slice(0, 12).map(p => {
       const loc = getEquipo(p.local), vis = getEquipo(p.visitante);
+      const d = matchDates[p.id] ? new Date(matchDates[p.id]) : null;
+      const fecha = d ? `${d.toLocaleDateString("es-CL",{day:"numeric",month:"short"})} ${d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}` : `G${p.grupo}`;
       return `<div class="partido-row"><div class="partido-equipos">
         <span class="equipo-nombre">${loc.bandera} ${loc.nombre}</span>
-        <span style="color:var(--gris);font-size:12px">G${p.grupo}</span>
+        <span style="color:var(--gris);font-size:11px">${fecha}</span>
         <span class="equipo-nombre visitante">${vis.nombre} ${vis.bandera}</span>
       </div></div>`;
     }).join("");
@@ -553,7 +557,23 @@ async function fetchFromAPI(silent) {
       await sb.from("resultados").upsert({ match_id: matchId, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
       n++;
     }
+    // Also fetch scheduled matches to get dates for sorting
+    try {
+      const res2 = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=SCHEDULED,TIMED`,
+        { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
+      if (res2.ok) {
+        const { matches: scheduled = [] } = await res2.json();
+        for (const m of scheduled) {
+          const locId = tlaToId(m.homeTeam?.tla);
+          const visId = tlaToId(m.awayTeam?.tla);
+          if (!locId || !visId) continue;
+          const matchId = findMatchId(locId, visId);
+          if (matchId && m.utcDate) matchDates[matchId] = m.utcDate;
+        }
+      }
+    } catch (_) {}
     if (n > 0) { await loadResults(); await recalcAll(); }
+    renderResultados();
     if (st && !silent) st.textContent = `✅ ${n} resultado(s) actualizados`;
     return n;
   } catch (e) { if (st && !silent) st.textContent = `❌ ${e.message}`; return 0; }
