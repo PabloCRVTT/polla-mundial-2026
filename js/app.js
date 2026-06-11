@@ -90,6 +90,7 @@ async function initApp() {
   navigateTo("dashboard");
 
   if (FOOTBALL_API_KEY && FOOTBALL_API_KEY !== "TU_FOOTBALL_DATA_KEY") {
+    fetchMatchDates();
     fetchFromAPI(true);
     setInterval(() => fetchFromAPI(true), 5 * 60 * 1000);
   }
@@ -557,26 +558,28 @@ async function fetchFromAPI(silent) {
       await sb.from("resultados").upsert({ match_id: matchId, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
       n++;
     }
-    // Also fetch scheduled matches to get dates for sorting
-    try {
-      const res2 = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=SCHEDULED,TIMED`,
-        { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
-      if (res2.ok) {
-        const { matches: scheduled = [] } = await res2.json();
-        for (const m of scheduled) {
-          const locId = tlaToId(m.homeTeam?.tla);
-          const visId = tlaToId(m.awayTeam?.tla);
-          if (!locId || !visId) continue;
-          const matchId = findMatchId(locId, visId);
-          if (matchId && m.utcDate) matchDates[matchId] = m.utcDate;
-        }
-      }
-    } catch (_) {}
     if (n > 0) { await loadResults(); await recalcAll(); }
-    renderResultados();
+    if (n > 0 && currentView === "resultados") renderResultados();
     if (st && !silent) st.textContent = `✅ ${n} resultado(s) actualizados`;
     return n;
   } catch (e) { if (st && !silent) st.textContent = `❌ ${e.message}`; return 0; }
+}
+
+async function fetchMatchDates() {
+  try {
+    const res = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=SCHEDULED,TIMED`,
+      { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
+    if (!res.ok) return;
+    const { matches = [] } = await res.json();
+    for (const m of matches) {
+      const locId = tlaToId(m.homeTeam?.tla);
+      const visId = tlaToId(m.awayTeam?.tla);
+      if (!locId || !visId) continue;
+      const matchId = findMatchId(locId, visId);
+      if (matchId && m.utcDate) matchDates[matchId] = m.utcDate;
+    }
+    if (currentView === "resultados") renderResultados();
+  } catch (_) {}
 }
 
 function findMatchId(l, v) {
