@@ -531,7 +531,8 @@ async function fetchFromAPI(silent) {
   const st = document.getElementById("api-status");
   if (st && !silent) st.textContent = "Consultando...";
   try {
-    const res = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=FINISHED`,
+    const statuses = "IN_PLAY,PAUSED,HALFTIME,FINISHED";
+    const res = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=${statuses}`,
       { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { matches = [] } = await res.json();
@@ -542,10 +543,14 @@ async function fetchFromAPI(silent) {
       if (!locId || !visId) continue;
       const matchId = findMatchId(locId, visId);
       if (!matchId) continue;
-      const h = m.score?.fullTime?.home, v = m.score?.fullTime?.away;
+      const isLive = ["IN_PLAY", "PAUSED", "HALFTIME"].includes(m.status);
+      const score = isLive ? (m.score?.halfTime || m.score?.fullTime) : m.score?.fullTime;
+      const h = score?.home ?? m.score?.fullTime?.home;
+      const v = score?.away ?? m.score?.fullTime?.away;
       if (h == null) continue;
-      if (realResults[matchId]?.status === "FINISHED" && realResults[matchId]?.h === h && realResults[matchId]?.v === v) continue;
-      await sb.from("resultados").upsert({ match_id: matchId, home_score: h, away_score: v, status: "FINISHED" }, { onConflict: "match_id" });
+      const apiStatus = isLive ? "LIVE" : "FINISHED";
+      if (realResults[matchId]?.status === apiStatus && realResults[matchId]?.h === h && realResults[matchId]?.v === v) continue;
+      await sb.from("resultados").upsert({ match_id: matchId, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
       n++;
     }
     if (n > 0) { await loadResults(); await recalcAll(); }
