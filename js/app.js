@@ -535,7 +535,7 @@ async function fetchFromAPI(silent) {
   const st = document.getElementById("api-status");
   if (st && !silent) st.textContent = "Consultando...";
   try {
-    const statuses = "IN_PLAY,PAUSED,HALFTIME,FINISHED";
+    const statuses = "IN_PLAY,PAUSED,LIVE,FINISHED";
     const res = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=${statuses}`,
       { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -547,7 +547,7 @@ async function fetchFromAPI(silent) {
       if (!locId || !visId) continue;
       const matchId = findMatchId(locId, visId);
       if (!matchId) continue;
-      const isLive = ["IN_PLAY", "PAUSED", "HALFTIME"].includes(m.status);
+      const isLive = ["IN_PLAY", "PAUSED", "LIVE"].includes(m.status);
       const score = isLive ? (m.score?.halfTime || m.score?.fullTime) : m.score?.fullTime;
       const h = score?.home ?? m.score?.fullTime?.home;
       const v = score?.away ?? m.score?.fullTime?.away;
