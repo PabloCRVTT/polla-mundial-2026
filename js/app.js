@@ -90,7 +90,6 @@ async function initApp() {
   navigateTo("dashboard");
 
   if (FOOTBALL_API_KEY && FOOTBALL_API_KEY !== "TU_FOOTBALL_DATA_KEY") {
-    fetchMatchDates();
     fetchFromAPI(true);
     setInterval(() => fetchFromAPI(true), 5 * 60 * 1000);
   }
@@ -525,61 +524,47 @@ async function guardarResultadoAdmin(matchId) {
   showToast("✅ Resultado guardado", "success"); renderAdmin();
 }
 
-const TLA_TO_ID = { CUW: "cur", URY: "uru" };
-function tlaToId(tla) {
-  if (!tla) return null;
-  const mapped = TLA_TO_ID[tla] || tla.toLowerCase();
+const ESPN_TLA = { CUW: "cur", URU: "uru" };
+function espnToId(abbr) {
+  if (!abbr) return null;
+  const mapped = ESPN_TLA[abbr] || abbr.toLowerCase();
   return EQUIPOS[mapped] ? mapped : null;
 }
 
 async function fetchFromAPI(silent) {
   const st = document.getElementById("api-status");
-  if (st && !silent) st.textContent = "Consultando...";
+  if (st && !silent) st.textContent = "Consultando ESPN...";
   try {
-    const statuses = "IN_PLAY,PAUSED,LIVE,FINISHED";
-    const res = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=${statuses}`,
-      { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
+    const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { matches = [] } = await res.json();
+    const { events = [] } = await res.json();
     let n = 0;
-    for (const m of matches) {
-      const locId = tlaToId(m.homeTeam?.tla);
-      const visId = tlaToId(m.awayTeam?.tla);
+    for (const ev of events) {
+      const comp = ev.competitions?.[0];
+      if (!comp) continue;
+      const home = comp.competitors?.find(c => c.homeAway === "home");
+      const away = comp.competitors?.find(c => c.homeAway === "away");
+      if (!home || !away) continue;
+      const locId = espnToId(home.team?.abbreviation);
+      const visId = espnToId(away.team?.abbreviation);
       if (!locId || !visId) continue;
       const matchId = findMatchId(locId, visId);
       if (!matchId) continue;
-      const isLive = ["IN_PLAY", "PAUSED", "LIVE"].includes(m.status);
-      const score = isLive ? (m.score?.halfTime || m.score?.fullTime) : m.score?.fullTime;
-      const h = score?.home ?? m.score?.fullTime?.home;
-      const v = score?.away ?? m.score?.fullTime?.away;
-      if (h == null) continue;
-      const apiStatus = isLive ? "LIVE" : "FINISHED";
+      if (ev.date) matchDates[matchId] = ev.date;
+      const state = comp.status?.type?.state;
+      if (state === "pre") continue;
+      const h = parseInt(home.score), v = parseInt(away.score);
+      if (isNaN(h)) continue;
+      const apiStatus = state === "post" ? "FINISHED" : "LIVE";
       if (realResults[matchId]?.status === apiStatus && realResults[matchId]?.h === h && realResults[matchId]?.v === v) continue;
       await sb.from("resultados").upsert({ match_id: matchId, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
       n++;
     }
     if (n > 0) { await loadResults(); await recalcAll(); }
-    if (n > 0 && currentView === "resultados") renderResultados();
+    if (currentView === "resultados") renderResultados();
     if (st && !silent) st.textContent = `✅ ${n} resultado(s) actualizados`;
     return n;
   } catch (e) { if (st && !silent) st.textContent = `❌ ${e.message}`; return 0; }
-}
-
-async function fetchMatchDates() {
-  try {
-    const res = await fetch(`https://api.football-data.org/v4/competitions/${FOOTBALL_COMPETITION_ID}/matches?status=SCHEDULED,TIMED`,
-      { headers: { "X-Auth-Token": FOOTBALL_API_KEY } });
-    if (!res.ok) return;
-    const { matches = [] } = await res.json();
-    for (const m of matches) {
-      const locId = tlaToId(m.homeTeam?.tla);
-      const visId = tlaToId(m.awayTeam?.tla);
-      if (!locId || !visId) continue;
-      const matchId = findMatchId(locId, visId);
-      if (matchId && m.utcDate) matchDates[matchId] = m.utcDate;
-    }
-    if (currentView === "resultados") renderResultados();
-  } catch (_) {}
 }
 
 function findMatchId(l, v) {
