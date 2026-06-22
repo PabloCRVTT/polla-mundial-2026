@@ -548,16 +548,18 @@ async function fetchFromAPI(silent) {
       const locId = espnToId(home.team?.abbreviation);
       const visId = espnToId(away.team?.abbreviation);
       if (!locId || !visId) continue;
-      const matchId = findMatchId(locId, visId);
-      if (!matchId) continue;
-      if (ev.date) matchDates[matchId] = ev.date;
+      const match = findMatch(locId, visId);
+      if (!match) continue;
+      if (ev.date) matchDates[match.id] = ev.date;
       const state = comp.status?.type?.state;
       if (state === "pre") continue;
-      const h = parseInt(home.score), v = parseInt(away.score);
-      if (isNaN(h)) continue;
+      const hRaw = parseInt(home.score), vRaw = parseInt(away.score);
+      if (isNaN(hRaw)) continue;
+      const h = match.swapped ? vRaw : hRaw;
+      const v = match.swapped ? hRaw : vRaw;
       const apiStatus = state === "post" ? "FINISHED" : "LIVE";
-      if (realResults[matchId]?.status === apiStatus && realResults[matchId]?.h === h && realResults[matchId]?.v === v) continue;
-      await sb.from("resultados").upsert({ match_id: matchId, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
+      if (realResults[match.id]?.status === apiStatus && realResults[match.id]?.h === h && realResults[match.id]?.v === v) continue;
+      await sb.from("resultados").upsert({ match_id: match.id, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
       n++;
     }
     if (n > 0) { await loadResults(); await recalcAll(); }
@@ -567,9 +569,12 @@ async function fetchFromAPI(silent) {
   } catch (e) { if (st && !silent) st.textContent = `❌ ${e.message}`; return 0; }
 }
 
-function findMatchId(l, v) {
-  return PARTIDOS_GRUPOS.find(m => (m.local === l && m.visitante === v) || (m.local === v && m.visitante === l))?.id || null;
+function findMatch(l, v) {
+  const m = PARTIDOS_GRUPOS.find(m => (m.local === l && m.visitante === v) || (m.local === v && m.visitante === l));
+  if (!m) return null;
+  return { id: m.id, swapped: m.local !== l };
 }
+function findMatchId(l, v) { return findMatch(l, v)?.id || null; }
 
 // ---------- Utils ----------
 function getEquipo(id) { return EQUIPOS[id] || { nombre: id, bandera: "🏴", grupo: "?" }; }
