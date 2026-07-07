@@ -394,28 +394,70 @@ function guardarCampeonPred() {
 }
 
 // ---------- Resultados ----------
+function resultadoRowKnockout(m) {
+  const loc = getEquipo(m.local_id), vis = getEquipo(m.visitante_id);
+  const r = realResults[m.id];
+  const finished = r?.status === "FINISHED";
+  const faseNombre = FASES_ELIMINATORIAS.find(f => f.id === m.fase)?.nombre || m.fase;
+  return `<div class="partido-row cerrado" style="padding:10px 0;border-bottom:1px solid var(--gris-borde)">
+    <div class="partido-equipos">
+      <span class="equipo-nombre">${loc.bandera} ${loc.nombre}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px;font-weight:800">${r?.h ?? "–"}</span>
+        <span style="color:var(--gris)">–</span>
+        <span style="font-size:20px;font-weight:800">${r?.v ?? "–"}</span>
+      </div>
+      <span class="equipo-nombre visitante">${vis.nombre} ${vis.bandera}</span>
+    </div>
+    <div style="text-align:center;margin-top:4px">
+      <span style="font-size:11px;color:var(--gris)">${finished ? "✅ Final" : "🔴 En juego"} · ${faseNombre}</span>
+    </div>
+  </div>`;
+}
+
 function renderResultados() {
   const cont = document.getElementById("resultados-container");
-  const finalizados = PARTIDOS_GRUPOS.filter(p => realResults[p.id]?.status === "FINISHED");
-  const enCurso = PARTIDOS_GRUPOS.filter(p => realResults[p.id] && realResults[p.id].status !== "FINISHED");
-  const proximos = PARTIDOS_GRUPOS.filter(p => !realResults[p.id]);
+
+  // All matches: groups + knockout
+  const allMatches = [
+    ...PARTIDOS_GRUPOS.map(p => ({ ...p, type: "grupo", locId: p.local, visId: p.visitante })),
+    ...knockoutMatches.filter(m => m.local_id && m.visitante_id).map(m => ({ ...m, type: "elim", locId: m.local_id, visId: m.visitante_id })),
+  ];
+
+  const enCurso = allMatches.filter(p => realResults[p.id] && realResults[p.id].status !== "FINISHED");
+  const finGrupos = PARTIDOS_GRUPOS.filter(p => realResults[p.id]?.status === "FINISHED");
+  const finElim = knockoutMatches.filter(m => m.local_id && realResults[m.id]?.status === "FINISHED");
+  const proxGrupos = PARTIDOS_GRUPOS.filter(p => !realResults[p.id]);
+  const proxElim = knockoutMatches.filter(m => m.local_id && m.visitante_id && !realResults[m.id]);
 
   let html = "";
 
+  // Live matches
   if (enCurso.length) {
     html += `<div class="card"><div class="card-title">🔴 En juego</div>`;
-    html += enCurso.map(p => resultadoRow(p)).join("");
+    html += enCurso.map(p => p.type === "elim" ? resultadoRowKnockout(p) : resultadoRow(p)).join("");
     html += `</div>`;
   }
 
-  if (finalizados.length) {
-    const porFecha = {};
-    finalizados.forEach(p => {
-      const grupo = p.grupo;
-      (porFecha[grupo] ??= []).push(p);
+  // Finished knockout by round
+  if (finElim.length) {
+    const porFase = {};
+    finElim.forEach(m => { (porFase[m.fase] ??= []).push(m); });
+    FASES_ELIMINATORIAS.forEach(f => {
+      const partidos = porFase[f.id];
+      if (!partidos?.length) return;
+      html += `<div class="card"><div class="card-title">⚡ ${f.nombre}</div>`;
+      html += partidos.map(m => resultadoRowKnockout(m)).join("");
+      html += `</div>`;
     });
+  }
+
+  // Finished groups
+  if (finGrupos.length) {
+    const porGrupo = {};
+    finGrupos.forEach(p => { (porGrupo[p.grupo] ??= []).push(p); });
     Object.keys(GRUPOS).forEach(gid => {
-      const partidos = porFecha[gid];
+      const partidos = porGrupo[gid];
       if (!partidos?.length) return;
       const grupo = GRUPOS[gid];
       html += `<div class="card"><div class="card-title">Grupo ${gid} — ${grupo.equipos.map(id => getEquipo(id).bandera).join(" ")}</div>`;
@@ -424,14 +466,33 @@ function renderResultados() {
     });
   }
 
-  if (!finalizados.length && !enCurso.length) {
-    html = `<div class="empty-state"><div class="icon">📺</div><p>Aún no hay resultados — el primer partido es hoy.</p></div>`;
+  if (!finGrupos.length && !finElim.length && !enCurso.length) {
+    html = `<div class="empty-state"><div class="icon">📺</div><p>Aún no hay resultados.</p></div>`;
   }
 
-  if (proximos.length) {
-    proximos.sort((a, b) => (matchDates[a.id] || "Z").localeCompare(matchDates[b.id] || "Z"));
-    html += `<div class="card"><div class="card-title">📅 Próximos partidos (${proximos.length})</div>`;
-    html += proximos.slice(0, 12).map(p => {
+  // Upcoming knockout
+  if (proxElim.length) {
+    proxElim.sort((a, b) => (matchDates[a.id] || "Z").localeCompare(matchDates[b.id] || "Z"));
+    html += `<div class="card"><div class="card-title">⚡ Próximos eliminatorias</div>`;
+    html += proxElim.map(m => {
+      const loc = getEquipo(m.local_id), vis = getEquipo(m.visitante_id);
+      const d = matchDates[m.id] ? new Date(matchDates[m.id]) : null;
+      const fecha = d ? `${d.toLocaleDateString("es-CL",{day:"numeric",month:"short"})} ${d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}` : "";
+      const faseNombre = FASES_ELIMINATORIAS.find(f => f.id === m.fase)?.nombre || "";
+      return `<div class="partido-row"><div class="partido-equipos">
+        <span class="equipo-nombre">${loc.bandera} ${loc.nombre}</span>
+        <span style="color:var(--gris);font-size:11px">${fecha || faseNombre}</span>
+        <span class="equipo-nombre visitante">${vis.nombre} ${vis.bandera}</span>
+      </div></div>`;
+    }).join("");
+    html += `</div>`;
+  }
+
+  // Upcoming groups
+  if (proxGrupos.length) {
+    proxGrupos.sort((a, b) => (matchDates[a.id] || "Z").localeCompare(matchDates[b.id] || "Z"));
+    html += `<div class="card"><div class="card-title">📅 Próximos grupos (${proxGrupos.length})</div>`;
+    html += proxGrupos.slice(0, 12).map(p => {
       const loc = getEquipo(p.local), vis = getEquipo(p.visitante);
       const d = matchDates[p.id] ? new Date(matchDates[p.id]) : null;
       const fecha = d ? `${d.toLocaleDateString("es-CL",{day:"numeric",month:"short"})} ${d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}` : `G${p.grupo}`;
@@ -441,7 +502,7 @@ function renderResultados() {
         <span class="equipo-nombre visitante">${vis.nombre} ${vis.bandera}</span>
       </div></div>`;
     }).join("");
-    if (proximos.length > 12) html += `<p class="text-muted" style="text-align:center;margin-top:8px">+${proximos.length - 12} partidos más</p>`;
+    if (proxGrupos.length > 12) html += `<p class="text-muted" style="text-align:center;margin-top:8px">+${proxGrupos.length - 12} partidos más</p>`;
     html += `</div>`;
   }
 
@@ -531,6 +592,16 @@ function espnToId(abbr) {
   return EQUIPOS[mapped] ? mapped : null;
 }
 
+// Knockout round sizes: cumulative thresholds
+const KNOCKOUT_THRESHOLDS = [
+  { upTo: 16, fase: "r32" },
+  { upTo: 24, fase: "r16" },
+  { upTo: 28, fase: "qf" },
+  { upTo: 30, fase: "sf" },
+  { upTo: 31, fase: "3ro" },
+  { upTo: 32, fase: "fin" },
+];
+
 async function fetchFromAPI(silent) {
   const st = document.getElementById("api-status");
   if (st && !silent) st.textContent = "Consultando ESPN...";
@@ -538,7 +609,9 @@ async function fetchFromAPI(silent) {
     const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260720");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { events = [] } = await res.json();
-    let n = 0;
+    let n = 0, kn = 0, koSeq = 0;
+    // Sort events by date to ensure sequential knockout numbering
+    events.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     for (const ev of events) {
       const comp = ev.competitions?.[0];
       if (!comp) continue;
@@ -548,22 +621,55 @@ async function fetchFromAPI(silent) {
       const locId = espnToId(home.team?.abbreviation);
       const visId = espnToId(away.team?.abbreviation);
       if (!locId || !visId) continue;
+
+      // Group stage match
       const match = findMatch(locId, visId);
-      if (!match) continue;
-      if (ev.date) matchDates[match.id] = ev.date;
+      if (match) {
+        if (ev.date) matchDates[match.id] = ev.date;
+        const state = comp.status?.type?.state;
+        if (state === "pre") continue;
+        const hRaw = parseInt(home.score), vRaw = parseInt(away.score);
+        if (isNaN(hRaw)) continue;
+        const h = match.swapped ? vRaw : hRaw;
+        const v = match.swapped ? hRaw : vRaw;
+        const apiStatus = state === "post" ? "FINISHED" : "LIVE";
+        if (realResults[match.id]?.status === apiStatus && realResults[match.id]?.h === h && realResults[match.id]?.v === v) continue;
+        await sb.from("resultados").upsert({ match_id: match.id, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
+        n++;
+        continue;
+      }
+
+      // Knockout match — determine round by sequential order
+      koSeq++;
+      const round = KNOCKOUT_THRESHOLDS.find(r => koSeq <= r.upTo);
+      if (!round) continue;
+      const fase = round.fase;
+      const prevThreshold = KNOCKOUT_THRESHOLDS[KNOCKOUT_THRESHOLDS.indexOf(round) - 1]?.upTo || 0;
+      const orden = koSeq - prevThreshold;
+      const kid = `${fase}_${orden}`;
+      if (ev.date) matchDates[kid] = ev.date;
+      const existing = knockoutMatches.find(m => m.id === kid);
+      if (!existing || existing.local_id !== locId || existing.visitante_id !== visId) {
+        await sb.from("eliminatoria").upsert({
+          id: kid, fase, orden,
+          local_id: locId, visitante_id: visId,
+          local_label: home.team?.displayName || "", visitante_label: away.team?.displayName || ""
+        }, { onConflict: "id" });
+        kn++;
+      }
       const state = comp.status?.type?.state;
       if (state === "pre") continue;
-      const hRaw = parseInt(home.score), vRaw = parseInt(away.score);
-      if (isNaN(hRaw)) continue;
-      const h = match.swapped ? vRaw : hRaw;
-      const v = match.swapped ? hRaw : vRaw;
+      const h = parseInt(home.score), v = parseInt(away.score);
+      if (isNaN(h)) continue;
       const apiStatus = state === "post" ? "FINISHED" : "LIVE";
-      if (realResults[match.id]?.status === apiStatus && realResults[match.id]?.h === h && realResults[match.id]?.v === v) continue;
-      await sb.from("resultados").upsert({ match_id: match.id, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
+      if (realResults[kid]?.status === apiStatus && realResults[kid]?.h === h && realResults[kid]?.v === v) continue;
+      await sb.from("resultados").upsert({ match_id: kid, home_score: h, away_score: v, status: apiStatus }, { onConflict: "match_id" });
       n++;
     }
+    if (kn > 0) await loadKnockout();
     if (n > 0) { await loadResults(); await recalcAll(); }
     if (currentView === "resultados") renderResultados();
+    if (currentView === "eliminatoria") renderEliminatoria();
     if (st && !silent) st.textContent = `✅ ${n} resultado(s) actualizados`;
     return n;
   } catch (e) { if (st && !silent) st.textContent = `❌ ${e.message}`; return 0; }
